@@ -1,0 +1,876 @@
+---
+title: "Treatment Completed"
+author: "Connor Flynn"
+date: "12/11/2023"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(tidyverse)
+library(janitor)
+library(haven)
+library(feather)
+library(arrow)
+#library(chorddiag)
+library(circlize)
+library(kableExtra)
+options(scipen = 99)
+
+```
+
+Load in Data
+
+```{r}
+teds_d <- arrow::read_feather(here("data/teds_d_15_19.feather"))
+```
+
+
+Relevant variables
+
+```{r}
+teds_d_select_years_relevant <- teds_d %>% 
+  select(reason, freq1, freq1_d, los, employ, employ_d, livarag, livarag_d, freq_atnd_self_help, freq_atnd_self_help_d, stfips)
+```
+
+
+
+```{r}
+table(teds_d_select_years_relevant$reason)
+```
+
+```{r}
+teds_d_select_years_relevant %>%
+  group_by(reason) %>% 
+  summarise(count = n()) %>% 
+  mutate(percentage = count / sum(count) * 100)
+```
+
+
+
+
+```{r}
+reasons <- c(1, 2) # Define reasons as numeric
+teds_d_select_years_relevant_1_2 <- teds_d_select_years_relevant %>% 
+  filter(reason %in% reasons)
+```
+
+
+```{r}
+table(teds_d_select_years_relevant_1_2$reason)
+```
+
+
+
+Chord Diagrams
+
+
+
+*Frequency of Use*
+
+
+
+Completed Treatment 
+
+
+
+```{r}
+teds_d_select_years_relevant_1 <- teds_d_select_years_relevant_1_2 %>% 
+  filter(reason == 1)
+```
+
+```{r}
+teds_d_select_years_relevant_1 <- teds_d_select_years_relevant_1 %>% 
+  select(freq1, freq1_d)
+
+teds_d_select_years_relevant_1 <- teds_d_select_years_relevant_1 %>%
+  mutate_at(vars(freq1, freq1_d), as.character)
+```
+
+
+
+```{r}
+teds_d_select_years_relevant_1[is.na(teds_d_select_years_relevant_1)] <- "unknown"
+
+teds_d_select_years_relevant_1 <- replace(teds_d_select_years_relevant_1, teds_d_select_years_relevant_1 == "1", "no use")
+
+teds_d_select_years_relevant_1 <- replace(teds_d_select_years_relevant_1, teds_d_select_years_relevant_1 == "2", "some use")
+
+teds_d_select_years_relevant_1 <- replace(teds_d_select_years_relevant_1, teds_d_select_years_relevant_1 == "3", "daily use")
+```
+
+
+```{r}
+frequency_of_use_paths_1 <- teds_d_select_years_relevant_1 %>% 
+  group_by(freq1, freq1_d) %>% 
+  count()
+```
+
+
+```{r}
+frequency_of_use_paths_1 <- frequency_of_use_paths_1 %>%
+  rename(rowname = freq1)
+
+frequency_of_use_paths_1 <- frequency_of_use_paths_1 %>%
+  rename(key = freq1_d)
+
+frequency_of_use_paths_1 <- frequency_of_use_paths_1 %>%
+  rename(value = n)
+```
+
+
+
+```{r}
+matrix_data_completed <- frequency_of_use_paths_1 %>%
+  pivot_wider(names_from = key, values_from = value, values_fill = 0)
+
+matrix_data_completed <- column_to_rownames(matrix_data_completed, var = "rowname")
+
+matrix_data_completed <- as.matrix(matrix_data_completed)
+```
+
+
+
+
+```{r}
+# Set the output file path
+output_file <- here("plots", "frequency_of_use_chord_completed.png")
+
+# Save the plot as a PNG with higher resolution and larger dimensions
+png(output_file, width = 3600, height = 3600, res = 450) # Adjust dimensions and resolution
+
+
+# Generate the plot
+circos.clear()
+circos.par(start.degree = 90, gap.degree = 4, track.margin = c(-0.1, 0.12), points.overflow.warning = FALSE)
+par(mar = rep(0, 4))
+
+cols <- hcl.colors(16, "Geyser")
+colors <- c(`no use` = "#D2AD7CFF", `some use` = "#639CA4FF",
+            `daily use` = "#226060FF", `unknown` = "#BE7245FF")
+
+completed_chord <- chordDiagram(matrix_data_completed,
+             col = cols,
+             transparency = 0.1,
+             link.lwd = 1,    # Line width
+             link.lty = 1,    # Line type
+             link.border = 1,
+             directional = 1, direction.type = c("diffHeight", "arrows"),
+             link.arr.type = "big.arrow",
+             grid.col = colors) 
+title("Frequency of Use from Admission to Discharge", line = -1, sub = "Completed Treatments")
+
+# Close the device to save the plot
+dev.off()
+
+```
+
+
+```{r}
+completed_chord <- completed_chord %>% 
+  select(rn, cn, col, value1) %>% 
+  mutate(percentage = value1/sum(value1) *100)
+# 
+completed_chord <- completed_chord[order(-completed_chord$percentage), ]
+
+colnames(completed_chord)[colnames(completed_chord) == "rn"] ="Admission"
+
+colnames(completed_chord)[colnames(completed_chord) == "cn"] ="Discharge"
+
+colnames(completed_chord)[colnames(completed_chord) == "value1"] ="Treatment Episodes"
+
+colnames(completed_chord)[colnames(completed_chord) == "percentage"] ="Percentage"
+
+
+completed_chord$Percentage <- round(completed_chord$Percentage, digit = 2)
+```
+
+
+
+```{r}
+completed_chord %>%
+  kbl(caption = "Pathways in Frequency of Use for Completed Treatments") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>% 
+  column_spec(1:6, background = completed_chord$col) %>% 
+  kableExtra::remove_column(1) %>% 
+  kableExtra::remove_column(3)
+
+```
+
+Dropped out of Treatment 
+
+```{r}
+teds_d_select_years_relevant_2 <- teds_d_select_years_relevant_1_2 %>% 
+  filter(reason == 2)
+```
+
+```{r}
+teds_d_select_years_relevant_2 <- teds_d_select_years_relevant_2 %>% 
+  select(freq1, freq1_d)
+
+teds_d_select_years_relevant_2 <- teds_d_select_years_relevant_2 %>%
+  mutate_at(vars(freq1, freq1_d), as.character)
+```
+
+
+```{r}
+teds_d_select_years_relevant_2[is.na(teds_d_select_years_relevant_2)] <- "unknown"
+
+teds_d_select_years_relevant_2 <- replace(teds_d_select_years_relevant_2, teds_d_select_years_relevant_2 == "1", "no use")
+
+teds_d_select_years_relevant_2 <- replace(teds_d_select_years_relevant_2, teds_d_select_years_relevant_2 == "2", "some use")
+
+teds_d_select_years_relevant_2 <- replace(teds_d_select_years_relevant_2, teds_d_select_years_relevant_2 == "3", "daily use")
+```
+
+
+```{r}
+frequency_of_use_paths_2 <- teds_d_select_years_relevant_2 %>% 
+  group_by(freq1, freq1_d) %>% 
+  count()
+```
+
+
+```{r}
+frequency_of_use_paths_2 <- frequency_of_use_paths_2 %>%
+  rename(rowname = freq1)
+
+frequency_of_use_paths_2 <- frequency_of_use_paths_2 %>%
+  rename(key = freq1_d)
+
+frequency_of_use_paths_2 <- frequency_of_use_paths_2 %>%
+  rename(value = n)
+```
+
+
+
+```{r}
+matrix_data_dropped <- frequency_of_use_paths_2 %>%
+  pivot_wider(names_from = key, values_from = value, values_fill = 0)
+
+matrix_data_dropped <- column_to_rownames(matrix_data_dropped, var = "rowname")
+
+matrix_data_dropped <- as.matrix(matrix_data_dropped)
+```
+
+
+
+
+```{r}
+
+# Set the output file path
+output_file <- here("plots", "frequency_of_use_chord_dropped.png")
+
+# Save the plot as a PNG with higher resolution and larger dimensions
+png(output_file, width = 3600, height = 3600, res = 450) # Adjust dimensions and resolution
+
+
+circos.clear()
+circos.par(start.degree = 90, gap.degree = 4, track.margin = c(-0.1, 0.12), points.overflow.warning = FALSE)
+par(mar = rep(0, 4))
+
+cols <- hcl.colors(16, "Geyser")
+colors <- c(`no use` = "#D2AD7CFF", `some use` = "#639CA4FF",
+            `daily use` = "#226060FF", `unknown` = "#BE7245FF")
+
+dropped_chord <- chordDiagram(matrix_data_dropped,
+             col = cols,
+             transparency = 0.1,
+             link.lwd = 1,    # Line width
+             link.lty = 1,    # Line type
+             link.border = 1,
+             directional = 1, direction.type = c("diffHeight", "arrows"),
+    link.arr.type = "big.arrow",
+             grid.col = colors) 
+title("Frequency of Use from Admission to Discharge", line = -1, sub = "Dropped Out Treatments")
+
+# Close the device to save the plot
+dev.off()
+
+
+
+
+```
+
+```{r}
+dropped_chord <- dropped_chord %>% 
+  select(rn, cn, col, value1) %>% 
+  mutate(percentage = value1/sum(value1) *100)
+# 
+dropped_chord <- dropped_chord[order(-dropped_chord$percentage), ]
+
+
+colnames(dropped_chord)[colnames(dropped_chord) == "rn"] ="Admission"
+
+colnames(dropped_chord)[colnames(dropped_chord) == "cn"] ="Discharge"
+
+colnames(dropped_chord)[colnames(dropped_chord) == "value1"] ="Treatment Episodes"
+
+colnames(dropped_chord)[colnames(dropped_chord) == "percentage"] ="Percentage"
+
+
+dropped_chord$Percentage <- round(dropped_chord$Percentage, digit = 2)
+```
+
+
+
+```{r}
+dropped_chord %>%
+  kbl(caption = "Pathways in Frequency of Use for Dropped Out Treatments") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>% 
+  column_spec(1:6, background = dropped_chord$col) %>% 
+  kableExtra::remove_column(1) %>% 
+  kableExtra::remove_column(3)
+```
+
+```{r}
+dropped_chord %>% 
+  group_by(cn) %>%
+  summarize(episodes = sum(value1)) %>% 
+  mutate(percentage = (episodes / sum(episodes)) * 100)
+```
+
+
+
+*Employment*
+
+Completed
+
+
+```{r}
+teds_d_select_years_relevant_1 <- teds_d_select_years_relevant_1_2 %>% 
+  filter(reason == 1)
+```
+
+```{r}
+frequency_of_use_paths_employment <- teds_d_select_years_relevant_1 %>% 
+  select(employ, employ_d)
+
+frequency_of_use_paths_employment <- frequency_of_use_paths_employment %>%
+  mutate_at(vars(employ, employ_d), as.character)
+```
+
+
+
+```{r}
+frequency_of_use_paths_employment[is.na(frequency_of_use_paths_employment)] <- "unknown"
+
+frequency_of_use_paths_employment <- replace(frequency_of_use_paths_employment, frequency_of_use_paths_employment == 1, "full time")
+
+frequency_of_use_paths_employment <- replace(frequency_of_use_paths_employment, frequency_of_use_paths_employment == 2, "part time")
+
+frequency_of_use_paths_employment <- replace(frequency_of_use_paths_employment, frequency_of_use_paths_employment == 3, "unemployed")
+
+frequency_of_use_paths_employment <- replace(frequency_of_use_paths_employment, frequency_of_use_paths_employment == 4, "not in labor force")
+
+```
+
+
+
+```{r}
+frequency_of_use_paths_employment <- frequency_of_use_paths_employment %>% 
+  group_by(employ, employ_d) %>% 
+  count()
+```
+
+```{r}
+frequency_of_use_paths_employment <- frequency_of_use_paths_employment %>%
+  rename(rowname = employ)
+
+frequency_of_use_paths_employment <- frequency_of_use_paths_employment %>%
+  rename(key = employ_d)
+
+frequency_of_use_paths_employment <- frequency_of_use_paths_employment %>%
+  rename(value = n)
+```
+
+
+```{r}
+# frequency_of_use_paths_employment <- frequency_of_use_paths_employment %>% 
+#   filter(rowname!= "unknown" & key != "unknown")
+```
+
+
+
+
+```{r}
+matrix_data_employment <- frequency_of_use_paths_employment %>%
+  pivot_wider(names_from = key, values_from = value, values_fill = 0)
+
+matrix_data_employment <- column_to_rownames(matrix_data_employment, var = "rowname")
+
+matrix_data_employment <- as.matrix(matrix_data_employment)
+```
+
+
+
+
+```{r}
+# Set the output file path
+output_file <- here("plots", "employment_chord_completed.png")
+
+# Save the plot as a PNG with higher resolution and larger dimensions
+png(output_file, width = 3600, height = 3600, res = 450) # Adjust dimensions and resolution
+
+
+circos.clear()
+circos.par(start.degree = 90, gap.degree = 4, track.margin = c(-0.1, 0.12), points.overflow.warning = FALSE)
+par(mar = rep(0, 4))
+
+cols <- hcl.colors(25, "Geyser")
+colors <- c(`full time` = "#D2AD7CFF", `part time` = "#639CA4FF",
+            `unemployed` = "#226060FF", `not in labor force` = "#BE7245FF", 
+            `unknown` = "#BE7245FF")
+
+completed_chord_employment <- chordDiagram(matrix_data_employment,
+             col = cols,
+             transparency = 0.1,
+             link.lwd = 1,    # Line width
+             link.lty = 1,    # Line type
+             link.border = 1,
+             directional = 1, direction.type = c("diffHeight", "arrows"),
+    link.arr.type = "big.arrow",
+             grid.col = colors) 
+title("Employment from Admission to Discharge", line = -1, sub = "Completed Treatments")
+
+dev.off()
+
+```
+```{r}
+completed_chord_employment <- completed_chord_employment %>% 
+  select(rn, cn, col, value1) %>% 
+  mutate(percentage = value1/sum(value1) *100)
+# 
+completed_chord_employment <- completed_chord_employment[order(-completed_chord_employment$percentage), ]
+
+
+colnames(completed_chord_employment)[colnames(completed_chord_employment) == "rn"] ="Admission"
+
+colnames(completed_chord_employment)[colnames(completed_chord_employment) == "cn"] ="Discharge"
+
+colnames(completed_chord_employment)[colnames(completed_chord_employment) == "value1"] ="Treatment Episodes"
+
+colnames(completed_chord_employment)[colnames(completed_chord_employment) == "percentage"] ="Percentage"
+
+
+completed_chord_employment$Percentage <- round(completed_chord_employment$Percentage, digit = 2)
+```
+
+
+
+```{r}
+completed_chord_employment %>%
+  kbl(caption = "Pathways in Employment for Completed Treatments") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>% 
+  column_spec(1:6, background = dropped_chord$col) %>% 
+  kableExtra::remove_column(1) %>% 
+  kableExtra::remove_column(3)
+  
+```
+
+Dropped
+
+
+```{r}
+teds_d_select_years_relevant_2 <- teds_d_select_years_relevant_1_2 %>% 
+  filter(reason == 2)
+```
+
+```{r}
+frequency_of_use_paths_employment_dropped <- teds_d_select_years_relevant_2 %>% 
+  select(employ, employ_d)
+
+frequency_of_use_paths_employment_dropped <- frequency_of_use_paths_employment_dropped %>%
+  mutate_at(vars(employ, employ_d), as.character)
+```
+
+
+
+```{r}
+frequency_of_use_paths_employment_dropped[is.na(frequency_of_use_paths_employment_dropped)] <- "unknown"
+
+frequency_of_use_paths_employment_dropped <- replace(frequency_of_use_paths_employment_dropped, frequency_of_use_paths_employment_dropped == 1, "full time")
+
+frequency_of_use_paths_employment_dropped <- replace(frequency_of_use_paths_employment_dropped, frequency_of_use_paths_employment_dropped == 2, "part time")
+
+frequency_of_use_paths_employment_dropped <- replace(frequency_of_use_paths_employment_dropped, frequency_of_use_paths_employment_dropped == 3, "unemployed")
+
+frequency_of_use_paths_employment_dropped <- replace(frequency_of_use_paths_employment_dropped, frequency_of_use_paths_employment_dropped == 4, "not in labor force")
+
+```
+
+
+
+```{r}
+frequency_of_use_paths_employment_dropped <- frequency_of_use_paths_employment_dropped %>% 
+  group_by(employ, employ_d) %>% 
+  count()
+```
+
+```{r}
+frequency_of_use_paths_employment_dropped <- frequency_of_use_paths_employment_dropped %>%
+  rename(rowname = employ)
+
+frequency_of_use_paths_employment_dropped <- frequency_of_use_paths_employment_dropped %>%
+  rename(key = employ_d)
+
+frequency_of_use_paths_employment_dropped <- frequency_of_use_paths_employment_dropped %>%
+  rename(value = n)
+```
+
+
+```{r}
+# frequency_of_use_paths_employment_dropped <- frequency_of_use_paths_employment_dropped %>% 
+#   filter(rowname!= "unknown" & key != "unknown")
+```
+
+
+
+
+```{r}
+matrix_data_employment_dropped <- frequency_of_use_paths_employment_dropped %>%
+  pivot_wider(names_from = key, values_from = value, values_fill = 0)
+
+matrix_data_employment_dropped <- column_to_rownames(matrix_data_employment_dropped, var = "rowname")
+
+matrix_data_employment_dropped <- as.matrix(matrix_data_employment_dropped)
+```
+
+
+
+
+```{r}
+# Set the output file path
+output_file <- here("plots", "employment_chord_dropped.png")
+
+# Save the plot as a PNG with higher resolution and larger dimensions
+png(output_file, width = 3600, height = 3600, res = 450) # Adjust dimensions and resolution
+
+
+circos.clear()
+circos.par(start.degree = 90, gap.degree = 4, track.margin = c(-0.1, 0.12), points.overflow.warning = FALSE)
+par(mar = rep(0, 4))
+
+cols <- hcl.colors(25, "Geyser")
+colors <- c(`full time` = "#D2AD7CFF", `part time` = "#639CA4FF",
+            `unemployed` = "#226060FF", `not in labor force` = "#BE7245FF", `unknown` = "#BE7245FF")
+
+dropped_chord_employment <- chordDiagram(matrix_data_employment_dropped,
+             col = cols,
+             transparency = 0.1,
+             link.lwd = 1,    # Line width
+             link.lty = 1,    # Line type
+             link.border = 1,
+             directional = 1, direction.type = c("diffHeight", "arrows"),
+    link.arr.type = "big.arrow",
+             grid.col = colors) 
+title("Employment from Admission to Discharge", line = -1, sub = "Dropped Treatments")
+
+dev.off()
+
+```
+
+```{r}
+dropped_chord_employment <- dropped_chord_employment %>% 
+  select(rn, cn, col, value1) %>% 
+  mutate(percentage = value1/sum(value1) *100)
+
+colnames(dropped_chord_employment)[colnames(dropped_chord_employment) == "rn"] ="Admission"
+
+colnames(dropped_chord_employment)[colnames(dropped_chord_employment) == "cn"] ="Discharge"
+
+colnames(dropped_chord_employment)[colnames(dropped_chord_employment) == "value1"] ="Treatment Episodes"
+
+colnames(dropped_chord_employment)[colnames(dropped_chord_employment) == "percentage"] ="Percentage"
+# 
+dropped_chord_employment <- dropped_chord_employment[order(-dropped_chord_employment$Percentage), ]
+```
+
+
+
+```{r}
+dropped_chord_employment %>%
+  kbl(caption = "Pathways in Employment for Dropped Out Treatments") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>% 
+  column_spec(1:6, background = dropped_chord$col) %>% 
+  kableExtra::remove_column(1) %>%
+  kableExtra::remove_column(3)
+
+```
+
+
+
+*Living Arrangement*
+
+Completed
+
+```{r}
+teds_d_select_years_relevant_1 <- teds_d_select_years_relevant_1_2 %>% 
+  filter(reason == 1)
+```
+
+```{r}
+living_arrangement_paths <- teds_d_select_years_relevant_1 %>% 
+  select(livarag, livarag_d)
+
+living_arrangement_paths <- living_arrangement_paths %>%
+  mutate_at(vars(livarag, livarag_d), as.character)
+```
+
+
+
+```{r}
+living_arrangement_paths <- living_arrangement_paths %>%
+  mutate_at(vars(livarag, livarag_d), as.character)
+```
+
+```{r}
+living_arrangement_paths[is.na(living_arrangement_paths)] <- "unknown"
+
+living_arrangement_paths <- replace(living_arrangement_paths, living_arrangement_paths == 1, "homeless")
+
+living_arrangement_paths <- replace(living_arrangement_paths, living_arrangement_paths == 2, "dependent living")
+
+living_arrangement_paths <- replace(living_arrangement_paths, living_arrangement_paths == 3, "independent living")
+
+
+```
+
+
+
+```{r}
+living_arrangement_paths <- living_arrangement_paths %>% 
+  group_by(livarag, livarag_d) %>% 
+  count()
+```
+
+
+```{r}
+living_arrangement_paths <- living_arrangement_paths %>%
+  rename(rowname = livarag)
+
+living_arrangement_paths <- living_arrangement_paths %>%
+  rename(key = livarag_d)
+
+living_arrangement_paths <- living_arrangement_paths %>%
+  rename(value = n)
+```
+
+
+
+
+
+
+
+```{r}
+matrix_data_housing <- living_arrangement_paths %>%
+  pivot_wider(names_from = key, values_from = value, values_fill = 0)
+
+matrix_data_housing <- column_to_rownames(matrix_data_housing, var = "rowname")
+
+matrix_data_housing <- as.matrix(matrix_data_housing)
+```
+
+
+
+
+```{r}
+# Set the output file path
+output_file <- here("plots", "living_arrangement_completed_chord.png")
+
+# Save the plot as a PNG with higher resolution and larger dimensions
+png(output_file, width = 3600, height = 3600, res = 450) # Adjust dimensions and resolution
+
+circos.clear()
+circos.par(start.degree = 90, gap.degree = 4, track.margin = c(-0.1, 0.12), points.overflow.warning = FALSE)
+par(mar = rep(0, 4))
+
+cols <- hcl.colors(16, "Geyser")
+colors <- c(`homeless` = "#D2AD7CFF", `dependent living` = "#639CA4FF",
+            `independent living` = "#226060FF", `unknown` = "#BE7245FF")
+
+completed_chord_housing <- chordDiagram(matrix_data_housing,
+             col = cols,
+             transparency = 0.1,
+             link.lwd = 1,    # Line width
+             link.lty = 1,    # Line type
+             link.border = 1,
+             directional = 1, direction.type = c("diffHeight", "arrows"),
+    link.arr.type = "big.arrow",
+             grid.col = colors) 
+
+title("Living Arrangement from Admission to Discharge", line = -1, sub = "Completed Treatments")
+
+dev.off()
+
+
+```
+
+```{r}
+completed_chord_housing <- completed_chord_housing %>% 
+  select(rn, cn, col, value1) %>% 
+  mutate(percentage = value1/sum(value1) *100)
+
+colnames(completed_chord_housing)[colnames(completed_chord_housing) == "rn"] ="Admission"
+
+colnames(completed_chord_housing)[colnames(completed_chord_housing) == "cn"] ="Discharge"
+
+colnames(completed_chord_housing)[colnames(completed_chord_housing) == "value1"] ="Treatment Episodes"
+
+colnames(completed_chord_housing)[colnames(completed_chord_housing) == "percentage"] ="Percentage"
+# 
+completed_chord_housing <- completed_chord_housing[order(-completed_chord_housing$Percentage), ]
+
+completed_chord_housing$Percentage <- round(completed_chord_housing$Percentage, digit = 2)
+```
+
+
+
+```{r}
+completed_chord_housing %>%
+  kbl(caption = "Pathways in Housing for Completed Treatments") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>% 
+  column_spec(1:6, background = dropped_chord$col) %>% 
+  kableExtra::remove_column(1) %>%
+  kableExtra::remove_column(3)
+```
+
+Dropped Out
+
+```{r}
+teds_d_select_years_relevant_2 <- teds_d_select_years_relevant_1_2 %>% 
+  filter(reason == 2)
+```
+
+```{r}
+living_arrangement_paths_dropped <- teds_d_select_years_relevant_2 %>% 
+  select(livarag, livarag_d)
+
+living_arrangement_paths_dropped <- living_arrangement_paths_dropped %>%
+  mutate_at(vars(livarag, livarag_d), as.character)
+```
+
+
+
+```{r}
+living_arrangement_paths_dropped <- living_arrangement_paths_dropped %>%
+  mutate_at(vars(livarag, livarag_d), as.character)
+```
+
+```{r}
+living_arrangement_paths_dropped[is.na(living_arrangement_paths_dropped)] <- "unknown"
+
+living_arrangement_paths_dropped <- replace(living_arrangement_paths_dropped, living_arrangement_paths_dropped == 1, "homeless")
+
+living_arrangement_paths_dropped <- replace(living_arrangement_paths_dropped, living_arrangement_paths_dropped == 2, "dependent living")
+
+living_arrangement_paths_dropped <- replace(living_arrangement_paths_dropped, living_arrangement_paths_dropped == 3, "independent living")
+
+
+```
+
+
+
+```{r}
+living_arrangement_paths_dropped <- living_arrangement_paths_dropped %>% 
+  group_by(livarag, livarag_d) %>% 
+  count()
+```
+
+
+```{r}
+living_arrangement_paths_dropped <- living_arrangement_paths_dropped %>%
+  rename(rowname = livarag)
+
+living_arrangement_paths_dropped <- living_arrangement_paths_dropped %>%
+  rename(key = livarag_d)
+
+living_arrangement_paths_dropped <- living_arrangement_paths_dropped %>%
+  rename(value = n)
+```
+
+
+
+
+
+
+
+```{r}
+matrix_data_housing_dropped <- living_arrangement_paths_dropped %>%
+  pivot_wider(names_from = key, values_from = value, values_fill = 0)
+
+matrix_data_housing_dropped <- column_to_rownames(matrix_data_housing_dropped, var = "rowname")
+
+matrix_data_housing_dropped <- as.matrix(matrix_data_housing_dropped)
+```
+
+
+
+
+```{r}
+# Set the output file path
+output_file <- here("plots", "living_arrangement_chord_dropped.png")
+
+# Save the plot as a PNG with higher resolution and larger dimensions
+png(output_file, width = 3600, height = 3600, res = 450) # Adjust dimensions and resolution
+
+circos.clear()
+circos.par(start.degree = 90, gap.degree = 4, track.margin = c(-0.1, 0.12), points.overflow.warning = FALSE)
+par(mar = rep(0, 4))
+
+cols <- hcl.colors(16, "Geyser")
+colors <- c(`homeless` = "#D2AD7CFF", `dependent living` = "#639CA4FF",
+            `independent living` = "#226060FF", `unknown` = "#BE7245FF")
+
+dropped_chord_housing <- chordDiagram(matrix_data_housing_dropped,
+             col = cols,
+             transparency = 0.1,
+             link.lwd = 1,    # Line width
+             link.lty = 1,    # Line type
+             link.border = 1,
+             directional = 1, direction.type = c("diffHeight", "arrows"),
+    link.arr.type = "big.arrow",
+             grid.col = colors) 
+
+title("Living Arrangement from Admission to Discharge", line = -1, sub = "Dropped Treatments")
+
+
+dev.off()
+
+```
+
+```{r}
+dropped_chord_housing <- dropped_chord_housing %>% 
+  select(rn, cn, col, value1) %>% 
+  mutate(percentage = value1/sum(value1) *100)
+
+colnames(dropped_chord_housing)[colnames(dropped_chord_housing) == "rn"] ="Admission"
+
+colnames(dropped_chord_housing)[colnames(dropped_chord_housing) == "cn"] ="Discharge"
+
+colnames(dropped_chord_housing)[colnames(dropped_chord_housing) == "value1"] ="Treatment Episodes"
+
+colnames(dropped_chord_housing)[colnames(dropped_chord_housing) == "percentage"] ="Percentage"
+# 
+dropped_chord_housing <- dropped_chord_housing[order(-dropped_chord_housing$Percentage), ]
+
+dropped_chord_housing$Percentage <- round(dropped_chord_housing$Percentage, digit = 2)
+# 
+dropped_chord_housing <- dropped_chord_housing[order(-dropped_chord_housing$Percentage), ]
+```
+
+
+
+```{r}
+dropped_chord_housing %>%
+  kbl(caption = "Pathways in Housing for Dropped Out Treatments") %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>% 
+  column_spec(1:6, background = dropped_chord$col) %>% 
+  kableExtra::remove_column(1) %>%
+  kableExtra::remove_column(3)
+
+
+```
+
