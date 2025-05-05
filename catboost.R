@@ -329,11 +329,11 @@ feature_importance_plot
 
 ## Save plot
 
-ggsave(filename = here("plots", "feature_importance_plot.png"),
-       plot = feature_importance_plot,
-       dpi = 300,
-       width = 10,
-       height = 6)
+# ggsave(filename = here("plots", "feature_importance_plot.png"),
+#        plot = feature_importance_plot,
+#        dpi = 300,
+#        width = 10,
+#        height = 6)
 
 
 ## Partial dependence  ----
@@ -428,11 +428,11 @@ partial_dependence_stfips
 
 ## Save plot
 
-ggsave(filename = here("plots", "partial_dependence_stfips.png"),
-       plot = partial_dependence_stfips,
-       dpi = 300,
-       width = 10,
-       height = 6)
+# ggsave(filename = here("plots", "partial_dependence_stfips.png"),
+#        plot = partial_dependence_stfips,
+#        dpi = 300,
+#        width = 10,
+#        height = 6)
 
 ### Freq1 ----
 
@@ -469,11 +469,11 @@ partial_dependence_freq1 <- ggplot(shap_df_freq1, aes(x = reorder(FeatureValue, 
   theme_bw()
 partial_dependence_freq1
 
-ggsave(filename = here("plots", "partial_dependence_freq1.png"),
-       plot = partial_dependence_freq1,
-       dpi = 300,
-       width = 10,
-       height = 6)
+# ggsave(filename = here("plots", "partial_dependence_freq1.png"),
+#        plot = partial_dependence_freq1,
+#        dpi = 300,
+#        width = 10,
+#        height = 6)
 
 
 
@@ -501,11 +501,11 @@ partial_dependence_los <- ggplot(shap_df_los_binned, aes(x = reorder(FeatureValu
   theme_bw()
 partial_dependence_los
 
-ggsave(filename = here("plots", "partial_dependence_los.png"),
-       plot = partial_dependence_los,
-       dpi = 300,
-       width = 10,
-       height = 6)
+# ggsave(filename = here("plots", "partial_dependence_los.png"),
+#        plot = partial_dependence_los,
+#        dpi = 300,
+#        width = 10,
+#        height = 6)
 
 ### self help ----
 
@@ -544,11 +544,11 @@ partial_dependence_self_help <- ggplot(shap_df_self_help, aes(x = reorder(Featur
   theme_bw()
 partial_dependence_self_help
 
-ggsave(filename = here("plots", "partial_dependence_self_help.png"),
-       plot = partial_dependence_self_help,
-       dpi = 300,
-       width = 10,
-       height = 6)
+# ggsave(filename = here("plots", "partial_dependence_self_help.png"),
+#        plot = partial_dependence_self_help,
+#        dpi = 300,
+#        width = 10,
+#        height = 6)
 
 
 ### services d ----
@@ -591,11 +591,11 @@ partial_dependence_services_d <- ggplot(shap_df_services_d, aes(x = reorder(Feat
   theme_bw()
 partial_dependence_services_d
 
-ggsave(filename = here("plots", "partial_dependence_services_d.png"),
-       plot = partial_dependence_services_d,
-       dpi = 300,
-       width = 10,
-       height = 6)
+# ggsave(filename = here("plots", "partial_dependence_services_d.png"),
+#        plot = partial_dependence_services_d,
+#        dpi = 300,
+#        width = 10,
+#        height = 6)
 
 ### livarag d ----
 
@@ -632,11 +632,11 @@ partial_dependence_livarag_d <- ggplot(shap_df_livarag_d, aes(x = reorder(Featur
   theme_bw()
 partial_dependence_livarag_d
 
-ggsave(filename = here("plots", "partial_dependence_livarag_d.png"),
-       plot = partial_dependence_livarag_d,
-       dpi = 300,
-       width = 10,
-       height = 6)
+# ggsave(filename = here("plots", "partial_dependence_livarag_d.png"),
+#        plot = partial_dependence_livarag_d,
+#        dpi = 300,
+#        width = 10,
+#        height = 6)
 
 
 
@@ -685,11 +685,11 @@ partial_dependence_division <- ggplot(shap_df_division, aes(x = reorder(FeatureV
   theme_bw()
 partial_dependence_division
 
-ggsave(filename = here("plots", "partial_dependence_division.png"),
-       plot = partial_dependence_division,
-       dpi = 300,
-       width = 10,
-       height = 6)
+# ggsave(filename = here("plots", "partial_dependence_division.png"),
+#        plot = partial_dependence_division,
+#        dpi = 300,
+#        width = 10,
+#        height = 6)
 
 
 
@@ -735,11 +735,11 @@ partial_dependence_services <- ggplot(shap_df_services, aes(x = reorder(FeatureV
 
 partial_dependence_services
 
-ggsave(filename = here("plots", "partial_dependence_services.png"),
-       plot = partial_dependence_services,
-       dpi = 300,
-       width = 10,
-       height = 6)
+# ggsave(filename = here("plots", "partial_dependence_services.png"),
+#        plot = partial_dependence_services,
+#        dpi = 300,
+#        width = 10,
+#        height = 6)
 
 
 ### psource ----
@@ -781,11 +781,11 @@ partial_dependence_psource <- ggplot(shap_df_psource, aes(x = reorder(FeatureVal
   theme_bw()
 partial_dependence_psource
 
-ggsave(filename = here("plots", "partial_dependence_psource.png"),
-       plot = partial_dependence_psource,
-       dpi = 300,
-       width = 10,
-       height = 6)
+# ggsave(filename = here("plots", "partial_dependence_psource.png"),
+#        plot = partial_dependence_psource,
+#        dpi = 300,
+#        width = 10,
+#        height = 6)
 
 ### hlthins ----
 
@@ -823,11 +823,11 @@ partial_dependence_hlthins <- ggplot(shap_df_hlthins, aes(x = reorder(FeatureVal
   theme_bw()
 partial_dependence_hlthins
 
-ggsave(filename = here("plots", "partial_dependence_hlthins.png"),
-       plot = partial_dependence_hlthins,
-       dpi = 300,
-       width = 10,
-       height = 6)
+# ggsave(filename = here("plots", "partial_dependence_hlthins.png"),
+#        plot = partial_dependence_hlthins,
+#        dpi = 300,
+#        width = 10,
+#        height = 6)
 
 ### employment ----
 
@@ -865,11 +865,11 @@ partial_dependence_employ_d <- ggplot(shap_df_employ_d, aes(x = reorder(FeatureV
   theme_bw()
 partial_dependence_employ_d
 
-ggsave(filename = here("plots", "partial_dependence_employ_d.png"),
-       plot = partial_dependence_employ_d,
-       dpi = 300,
-       width = 10,
-       height = 6)
+# ggsave(filename = here("plots", "partial_dependence_employ_d.png"),
+#        plot = partial_dependence_employ_d,
+#        dpi = 300,
+#        width = 10,
+#        height = 6)
 
 
 ### primary income ----
@@ -909,11 +909,46 @@ partial_dependence_priminc <- ggplot(shap_df_priminc, aes(x = reorder(FeatureVal
   theme_bw()
 partial_dependence_priminc
 
-ggsave(filename = here("plots", "partial_dependence_priminc.png"),
-       plot = partial_dependence_priminc,
-       dpi = 300,
-       width = 10,
-       height = 6)
+# ggsave(filename = here("plots", "partial_dependence_priminc.png"),
+#        plot = partial_dependence_priminc,
+#        dpi = 300,
+#        width = 10,
+#        height = 6)
+
+# faceted ---- 
+
+
+# Combine all processed SHAP dataframes
+shap_df_combined <- bind_rows(
+  shap_df_self_help %>% mutate(Feature = "Self-Help Attendance"),
+  shap_df_hlthins %>% mutate(Feature = "Health Insurance"),
+  shap_df_livarag_d %>% mutate(Feature = "Living Arrangement"),
+  shap_df_employ_d %>% mutate(Feature = "Employment Status"),
+  shap_df_psource %>% mutate(Feature = "Referral Source")
+)
+
+# Create faceted Partial Dependence Plot
+pdp_faceted <- ggplot(shap_df_combined, aes(x = reorder(FeatureValue, median), y = ShapValue)) +
+  geom_boxplot() +
+  facet_wrap(~ Feature, scales = "free_y") +
+  labs(title = "Partial Dependence Plots for Key Predictors",
+       x = "Feature Value",
+       y = "SHAP Value (Impact on Prediction)") +
+  coord_flip() +
+  theme_bw()
+
+# Display plot
+pdp_faceted
+
+# Save the plot
+# ggsave(filename = here("plots", "partial_dependence_faceted.png"),
+#        plot = pdp_faceted,
+#        dpi = 300,
+#        width = 12,
+#        height = 8)
+
+
+
 
 
 
@@ -924,19 +959,34 @@ ggsave(filename = here("plots", "partial_dependence_priminc.png"),
 #   pool = test_pool,
 #   type = "ShapValues"
 # )
-
-# Remove last column (base value) from SHAP values
-#shap_values <- shap_values[, -ncol(shap_values)]
-
-# Ensure feature names are correctly assigned
-#colnames(shap_values) <- colnames(train_data %>% select(-freq1_d))
+# 
+# # Remove last column (base value) from SHAP values
+# shap_values <- shap_values[, -ncol(shap_values)]
+# 
+# # Ensure feature names are correctly assigned
+# colnames(shap_values) <- colnames(train_data %>% select(-freq1_d))
 
 shap_obj <- shapviz(shap_values, X = test_data %>% select(-freq1_d))
 
 sv_importance(shap_obj) + ggtitle("SHAP Feature Importance (shapviz)")
 
-sv_waterfall(shap_obj, row_id = 34990) + ggtitle("SHAP Waterfall Plot")
-sv_waterfall(shap_obj, row_id = 34995) + ggtitle("SHAP Waterfall Plot")
+
+sv_waterfall(shap_obj, row_id = 500) + ggtitle("SHAP Waterfall Plot with Renamed Features")
+sv_waterfall(shap_obj, row_id = 2574) + ggtitle("SHAP Waterfall Plot with Renamed Features")
+
+test_data_shap_lookup <- test_data %>% 
+  rowid_to_column(var = "id")
+
+
+
+sv_waterfall(shap_obj, row_id = 33736) + ggtitle("SHAP Waterfall Plot")
+sv_waterfall(shap_obj, row_id = 128632) + ggtitle("SHAP Waterfall Plot")
+
+
+
+
+
+shapsv_waterfall(shap_obj, row_id = 34995) + ggtitle("SHAP Waterfall Plot")
 sv_waterfall(shap_obj, row_id = 1) + ggtitle("SHAP Waterfall Plot")
 sv_waterfall(shap_obj, row_id = 2) + ggtitle("SHAP Waterfall Plot")
 
@@ -970,3 +1020,23 @@ shap_interactions_named <- data.frame(
   Score = shap_interactions[, "score"]
 )
 
+# geoshapley ----
+
+# Save SHAP values and test data as Feather or CSV
+# write_feather(as.data.frame(shap_values), here("data", "shap_values.feather"))
+# write_feather(test_data %>% select(-freq1_d), here("data", "X_test.feather"))
+# write_feather(test_data %>% select(stfips), here("data", "stfips.feather"))
+# catboost.save_model(model, "models/model.cbm")
+# train_data_model_input <- train_data %>% select(-freq1_d)
+# 
+# features_to_use <- c("services_d", "hlthins", "los_binned", "stfips")  # add more if needed
+# 
+# train_data_subset <- train_data %>%
+#   select(all_of(features_to_use)) %>%
+#   mutate(across(everything(), ~ as.character(.)))  # ensure compatibility
+# 
+# write_feather(train_data_subset, "data/X_train_reduced.feather")
+# 
+# 
+# 
+# str(train_data[, c("services_d", "hlthins", "los_binned", "stfips")])
