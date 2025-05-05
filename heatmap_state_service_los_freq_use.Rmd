@@ -20,6 +20,7 @@ library(kableExtra)
 library(urbnmapr)
 library(forcats)
 library(sf)
+library(tidycensus)
 options(scipen = 99)
 ```
 
@@ -271,8 +272,8 @@ Join Data
 
 # Join the dataframes
 df_merged <- los_by_state %>%
-  full_join(services_by_state, by = "stfips") %>%
-  full_join(frequency_of_use_by_state, by = "stfips")
+  full_join(services_by_state, by = "stfips", relationship = "many-to-many") %>%
+  full_join(frequency_of_use_by_state, by = "stfips", relationship = "many-to-many")
 
 
 ```
@@ -391,13 +392,285 @@ ggsave(
 Make interactive
 
 ```{r}
-ggplotly(tile_map)
+#ggplotly(tile_map)
+```
+
+State Analysis
+
+```{r}
+teds_d <- arrow::read_feather(here("data/teds_d_15_19.feather"))
+```
+
+```{r}
+teds_d_completed <- teds_d %>% 
+  filter(reason == 1)
+```
+
+```{r}
+teds_d_state_counts <- teds_d_completed %>% 
+  group_by(stfips) %>% 
+  count(name = "count") %>% 
+  ungroup() %>% 
+  mutate(percentage = count / sum(count) * 100)
+```
+
+```{r}
+state_pop <- get_estimates(
+  geography = "state",
+  product = "population",
+  vintage = 2022,
+  year = 2022
+) %>%
+  filter(variable == "POPESTIMATE") %>%
+  select(NAME, value) %>%
+  rename(State = NAME, population = value)
+
+# 3. Add FIPS codes to join with your TEDS-D data
+state_pop <- state_pop %>%
+  mutate( # Match state name to FIPS
+    percent_of_us = population / sum(population) * 100
+  )
+
+# 4. Merge with your TEDS-D counts
+teds_d_state_counts <- teds_d_completed %>% 
+  group_by(stfips) %>% 
+  count(name = "treatmet_episodes") %>% 
+  ungroup() %>% 
+  mutate(percent_of_teds_d = treatmet_episodes / sum(treatmet_episodes) * 100) # ensure FIPS is zero-padded for join
+
+teds_d_state_counts <- merge(teds_d_state_counts, state_info, by = "stfips")
+
+teds_d_state_counts <- teds_d_state_counts %>%
+  left_join(state_pop, by = "State")
+
+teds_d_state_counts <- teds_d_state_counts %>%
+  mutate(
+    percent_of_teds_d = round(percent_of_teds_d, 2),
+    percent_of_us = round(percent_of_us, 2)
+  )
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(forcats)
+
+# Prepare the data
+pyramid_data <- teds_d_state_counts %>%
+  mutate(
+    percent_of_teds_d = -percent_of_teds_d,  # negative for left side
+    State = fct_reorder(State, percent_of_us)  # order states
+  )
+
+pyramid_plot <- ggplot(pyramid_data) +
+  # Left bar: % TEDS-D
+  geom_col(aes(x = percent_of_teds_d, y = State), fill = "#1f77b4") +
+  # Right bar: % US population
+  geom_col(aes(x = percent_of_us, y = State), fill = "#ff7f0e") +
+  
+  # Percentage labels inside bars
+  geom_text(aes(x = percent_of_teds_d, y = State, 
+                label = paste0(abs(percent_of_teds_d), "%")),
+            hjust = 1.8, color = "black", size = 3) +
+  
+  geom_text(aes(x = percent_of_us, y = State, 
+                label = paste0(percent_of_us, "%")),
+            hjust = -0.6, color = "black", size = 3) +
+
+  # State labels at center
+  geom_text(aes(x = 0, y = State, label = State),
+            hjust = 0.5, size = 2.2, fontface = "bold") +
+  
+  # Customize axes
+  scale_x_continuous(
+    breaks = seq(-15, 15, by = 5),
+    labels = function(x) paste0(abs(x), "%"),
+    limits = c(-20, 20)
+  ) +
+  labs(
+    x = "Percent of Total",
+    y = NULL,
+    title = "State-Level Comparison of TEDS-D Treatment Episodes vs Population",
+    subtitle = "Left: % of TEDS-D | Center: State | Right: % of U.S. Population",
+    caption = "Source: TEDS-D and U.S. Census Bureau (Vintage 2022)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    plot.title = element_text(face = "bold")
+  )
+
+pyramid_plot
+
+```
+
+```{r}
+ggsave(
+  filename = here("plots", "pyramid.png"),
+  plot = pyramid_plot,
+  device = "png",
+  width = 16,  # Adjust width
+  height = 9,  # Adjust height
+  dpi = 300
+)
 ```
 
 
 
+Health Insurance by State
 
 
 
+```{r}
+stfips_hlthins <- teds_d_completed %>%
+  mutate(
+    hlthins = factor(hlthins),  # Convert to categorical
+    stfips = factor(stfips)     # Convert to categorical
+  ) %>%
+  count(stfips, hlthins) %>%
+  group_by(stfips) %>%  # Group by state
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
+```
 
+
+```{r}
+stfips_hlthins <- merge(stfips_hlthins, state_info, by = "stfips")
+```
+
+```{r}
+stfips_hlthins <- stfips_hlthins %>%
+  mutate(hlthins = case_when(
+    hlthins == "1" ~ "Private insurance, Blue Cross/Blue Shield, HMO",
+    hlthins == "2" ~ "Medicaid",
+    hlthins == "3" ~ "Medicare, other (e.g. TRICARE, CHAMPUS)",
+    hlthins == "4" ~ "None",
+    TRUE ~ hlthins
+  ))
+```
+
+```{r}
+medicaid_order <- stfips_hlthins %>%
+  filter(hlthins == "Medicaid") %>%
+  arrange(percentage) %>%
+  pull(State)
+
+stfips_hlthins <- stfips_hlthins %>%
+  mutate(State = factor(State, levels = medicaid_order))
+```
+
+
+
+```{r}
+state_hlthins_plot <- ggplot(stfips_hlthins, aes(x = State, y = percentage, fill = hlthins)) +
+  geom_bar(stat = "identity", color = "black") +
+  geom_text(
+    aes(label = ifelse(percentage > 10, sprintf("%.1f%%", percentage), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3,
+    color = "black"
+  ) +
+  scale_fill_viridis_d(direction = -1) +
+  theme_bw() +
+  coord_flip() +
+  ylim(0, 101)
+
+state_hlthins_plot
+
+```
+
+
+
+```{r}
+ggsave(
+  filename = here("plots", "state_hlthins_plot.png"),
+  plot = state_hlthins_plot,
+  device = "png",
+  width = 16,  # Adjust width
+  height = 9,  # Adjust height
+  dpi = 300
+)
+```
+
+
+```{r}
+teds_d_completed <- teds_d_completed %>%
+  mutate(stfips = as.integer(stfips)) %>%  # ensure stfips is same type
+  left_join(state_info, by = "stfips")
+```
+
+```{r}
+# Add los_binned to your dataset
+teds_d_completed <- teds_d_completed %>%
+  mutate(
+    los_binned = case_when(
+      los == 1 ~ "1 day",
+      los >= 2 & los <= 10 ~ "2-10 days",
+      los >= 11 & los <= 21 ~ "11-21 days",
+      los >= 22 & los <= 30 ~ "22-30 days",
+      los == 31 ~ "31-45 days",
+      los == 32 ~ "46-60 days",
+      los == 33 ~ "61-90 days",
+      los == 34 ~ "91-120 days",
+      los == 35 ~ "121-180 days",
+      los == 36 ~ "181-365 days",
+      los == 37 ~ ">365 days",
+      TRUE ~ NA_character_
+    ),
+    los_binned = factor(
+      los_binned,
+      levels = c("1 day", "2-10 days", "11-21 days", "22-30 days",
+                 "31-45 days", "46-60 days", "61-90 days",
+                 "91-120 days", "121-180 days", "181-365 days", ">365 days"),
+      ordered = FALSE
+    )
+  )
+
+```
+
+
+```{r}
+teds_d_completed <- teds_d_completed %>%
+  mutate(
+    hlthins = as.character(hlthins),  # Ensure all values are character
+    hlthins = case_when(
+      hlthins == "1" ~ "Private insurance, Blue Cross/Blue Shield, HMO",
+      hlthins == "2" ~ "Medicaid",
+      hlthins == "3" ~ "Medicare, other (e.g. TRICARE, CHAMPUS)",
+      hlthins == "4" ~ "None",
+      TRUE ~ hlthins  # Pass through any unmatched values as strings
+    )
+  )
+
+```
+
+
+
+```{r}
+state_hlthins_hist_plot  <- ggplot(teds_d_completed, aes(x = los_binned, fill = as.factor(hlthins))) +
+  geom_bar(color = "black", position = "stack") +
+  facet_wrap(~State, scales = "free_y") +
+  scale_fill_viridis_d(direction = -1) +
+  theme_minimal() +
+  labs(x = "Length of Stay (Binned)", fill = "Health Insurance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.8, size = 6))
+
+state_hlthins_hist_plot
+
+```
+
+
+```{r}
+ggsave(
+  filename = here("plots", "state_hlthins_hist_plot.png"),
+  plot = state_hlthins_hist_plot,
+  device = "png",
+  width = 16,  # Adjust width
+  height = 9,  # Adjust height
+  dpi = 300
+)
+```
 
