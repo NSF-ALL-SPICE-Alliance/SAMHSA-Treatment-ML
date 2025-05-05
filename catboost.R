@@ -8,7 +8,7 @@ library(shapviz)
 
 
 ### Read feather 
-teds_d <- arrow::read_feather(here("teds_d_15_19.feather"))
+teds_d <- arrow::read_feather(here("data/teds_d_15_19.feather"))
 
 ### Check
 glimpse(teds_d)
