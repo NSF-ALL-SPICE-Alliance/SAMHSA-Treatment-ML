@@ -326,10 +326,10 @@ dropped_chord %>%
 ```
 
 ```{r}
-dropped_chord %>% 
-  group_by(cn) %>%
-  summarize(episodes = sum(value1)) %>% 
-  mutate(percentage = (episodes / sum(episodes)) * 100)
+# dropped_chord %>% 
+#   group_by(Discharge) %>%
+#   summarize(episodes = sum(`Treatment Episodes`)) %>% 
+#   mutate(percentage = (episodes / sum(episodes)) * 100)
 ```
 
 
@@ -874,3 +874,187 @@ dropped_chord_housing %>%
 
 ```
 
+
+
+# Completed Treatments: Self-Help Group Attendance
+```{r}
+self_help_completed <- teds_d_select_years_relevant_1_2 %>% 
+  filter(reason == 1) %>% 
+  select(freq_atnd_self_help, freq_atnd_self_help_d) %>% 
+  mutate(across(c(freq_atnd_self_help, freq_atnd_self_help_d), as.character))
+
+self_help_completed[is.na(self_help_completed)] <- "unknown"
+
+self_help_completed <- self_help_completed %>%
+  mutate(
+    freq_atnd_self_help = case_when(
+      freq_atnd_self_help == "1" ~ "no attendance",
+      freq_atnd_self_help == "2" ~ "1-3 times/mo",
+      freq_atnd_self_help == "3" ~ "4-7 times/mo",
+      freq_atnd_self_help == "4" ~ "8-30 times/mo",
+      freq_atnd_self_help == "5" ~ "some, unknown freq",
+      freq_atnd_self_help == "-9" ~ "missing",
+      TRUE ~ freq_atnd_self_help
+    ),
+    freq_atnd_self_help_d = case_when(
+      freq_atnd_self_help_d == "1" ~ "no attendance",
+      freq_atnd_self_help_d == "2" ~ "1-3 times/mo",
+      freq_atnd_self_help_d == "3" ~ "4-7 times/mo",
+      freq_atnd_self_help_d == "4" ~ "8-30 times/mo",
+      freq_atnd_self_help_d == "5" ~ "some, unknown freq",
+      freq_atnd_self_help_d == "-9" ~ "missing",
+      TRUE ~ freq_atnd_self_help_d
+    )
+  )
+
+self_help_paths_completed <- self_help_completed %>% 
+  group_by(freq_atnd_self_help, freq_atnd_self_help_d) %>% 
+  count() %>% 
+  rename(rowname = freq_atnd_self_help, key = freq_atnd_self_help_d, value = n)
+
+matrix_self_help_completed <- self_help_paths_completed %>%
+  pivot_wider(names_from = key, values_from = value, values_fill = 0) %>%
+  column_to_rownames(var = "rowname") %>%
+  as.matrix()
+
+labels_used <- union(rownames(matrix_self_help_completed), colnames(matrix_self_help_completed))
+colors <- c(`no attendance` = "#D2AD7CFF", `1-3 times/mo` = "#639CA4FF",
+            `4-7 times/mo` = "#226060FF", `8-30 times/mo` = "#4E8583",
+            `some, unknown freq` = "#BE7245FF", `missing` = "#999999FF", `unknown` = "#BE7245FF")
+colors[setdiff(labels_used, names(colors))] <- "#BBBBBB"
+
+output_file <- here("plots", "self_help_chord_completed.png")
+png(output_file, width = 3600, height = 3600, res = 450)
+circos.clear()
+circos.par(start.degree = 90, gap.degree = 4, track.margin = c(-0.1, 0.12), points.overflow.warning = FALSE)
+par(mar = rep(0, 4))
+
+completed_chord_self_help <- chordDiagram(matrix_self_help_completed,
+             col = NULL,
+             transparency = 0.1,
+             link.lwd = 1,
+             link.lty = 1,
+             link.border = 1,
+             directional = 1,
+             direction.type = c("diffHeight", "arrows"),
+             link.arr.type = "big.arrow",
+             grid.col = colors)
+title("Self-Help Attendance from Admission to Discharge", line = -1, sub = "Completed Treatments")
+dev.off()
+
+completed_chord_self_help <- completed_chord_self_help %>% 
+  select(rn, cn, col, value1) %>% 
+  mutate(percentage = value1/sum(value1) * 100)
+
+completed_chord_self_help <- completed_chord_self_help[order(-completed_chord_self_help$percentage), ]
+
+colnames(completed_chord_self_help)[colnames(completed_chord_self_help) == "rn"] ="Admission"
+colnames(completed_chord_self_help)[colnames(completed_chord_self_help) == "cn"] ="Discharge"
+colnames(completed_chord_self_help)[colnames(completed_chord_self_help) == "value1"] ="Treatment Episodes"
+colnames(completed_chord_self_help)[colnames(completed_chord_self_help) == "percentage"] ="Percentage"
+
+completed_chord_self_help$Percentage <- round(completed_chord_self_help$Percentage, digit = 2)
+
+output_table_file <- here("plots", "self_help_table_completed.png")
+
+save_kable(
+  completed_chord_self_help %>%
+    kbl(caption = "Pathways in Self-Help Attendance for Completed Treatments") %>%
+    kable_classic(full_width = F, html_font = "Cambria") %>% 
+    column_spec(1:6, background = completed_chord_self_help$col) %>% 
+    kableExtra::remove_column(1) %>% 
+    kableExtra::remove_column(3),
+  file = output_table_file,
+  zoom = 2
+)
+```
+
+# Dropped-Out Treatments: Self-Help Group Attendance
+```{r}
+self_help_dropped <- teds_d_select_years_relevant_1_2 %>% 
+  filter(reason == 2) %>% 
+  select(freq_atnd_self_help, freq_atnd_self_help_d) %>% 
+  mutate(across(c(freq_atnd_self_help, freq_atnd_self_help_d), as.character))
+
+self_help_dropped[is.na(self_help_dropped)] <- "unknown"
+
+self_help_dropped <- self_help_dropped %>%
+  mutate(
+    freq_atnd_self_help = case_when(
+      freq_atnd_self_help == "1" ~ "no attendance",
+      freq_atnd_self_help == "2" ~ "1-3 times/mo",
+      freq_atnd_self_help == "3" ~ "4-7 times/mo",
+      freq_atnd_self_help == "4" ~ "8-30 times/mo",
+      freq_atnd_self_help == "5" ~ "some, unknown freq",
+      freq_atnd_self_help == "-9" ~ "missing",
+      TRUE ~ freq_atnd_self_help
+    ),
+    freq_atnd_self_help_d = case_when(
+      freq_atnd_self_help_d == "1" ~ "no attendance",
+      freq_atnd_self_help_d == "2" ~ "1-3 times/mo",
+      freq_atnd_self_help_d == "3" ~ "4-7 times/mo",
+      freq_atnd_self_help_d == "4" ~ "8-30 times/mo",
+      freq_atnd_self_help_d == "5" ~ "some, unknown freq",
+      freq_atnd_self_help_d == "-9" ~ "missing",
+      TRUE ~ freq_atnd_self_help_d
+    )
+  )
+
+self_help_paths_dropped <- self_help_dropped %>% 
+  group_by(freq_atnd_self_help, freq_atnd_self_help_d) %>% 
+  count() %>% 
+  rename(rowname = freq_atnd_self_help, key = freq_atnd_self_help_d, value = n)
+
+matrix_self_help_dropped <- self_help_paths_dropped %>%
+  pivot_wider(names_from = key, values_from = value, values_fill = 0) %>%
+  column_to_rownames(var = "rowname") %>%
+  as.matrix()
+
+labels_used <- union(rownames(matrix_self_help_dropped), colnames(matrix_self_help_dropped))
+colors[setdiff(labels_used, names(colors))] <- "#BBBBBB"
+
+output_file <- here("plots", "self_help_chord_dropped.png")
+png(output_file, width = 3600, height = 3600, res = 450)
+circos.clear()
+circos.par(start.degree = 90, gap.degree = 4, track.margin = c(-0.1, 0.12), points.overflow.warning = FALSE)
+par(mar = rep(0, 4))
+
+dropped_chord_self_help <- chordDiagram(matrix_self_help_dropped,
+             col = NULL,
+             transparency = 0.1,
+             link.lwd = 1,
+             link.lty = 1,
+             link.border = 1,
+             directional = 1,
+             direction.type = c("diffHeight", "arrows"),
+             link.arr.type = "big.arrow",
+             grid.col = colors)
+title("Self-Help Attendance from Admission to Discharge", line = -1, sub = "Dropped-Out Treatments")
+dev.off()
+
+dropped_chord_self_help <- dropped_chord_self_help %>% 
+  select(rn, cn, col, value1) %>% 
+  mutate(percentage = value1/sum(value1) * 100)
+
+dropped_chord_self_help <- dropped_chord_self_help[order(-dropped_chord_self_help$percentage), ]
+
+colnames(dropped_chord_self_help)[colnames(dropped_chord_self_help) == "rn"] ="Admission"
+colnames(dropped_chord_self_help)[colnames(dropped_chord_self_help) == "cn"] ="Discharge"
+colnames(dropped_chord_self_help)[colnames(dropped_chord_self_help) == "value1"] ="Treatment Episodes"
+colnames(dropped_chord_self_help)[colnames(dropped_chord_self_help) == "percentage"] ="Percentage"
+
+dropped_chord_self_help$Percentage <- round(dropped_chord_self_help$Percentage, digit = 2)
+
+output_table_file <- here("plots", "self_help_table_dropped.png")
+
+save_kable(
+  dropped_chord_self_help %>%
+    kbl(caption = "Pathways in Self-Help Attendance for Dropped-Out Treatments") %>%
+    kable_classic(full_width = F, html_font = "Cambria") %>% 
+    column_spec(1:6, background = dropped_chord_self_help$col) %>% 
+    kableExtra::remove_column(1) %>% 
+    kableExtra::remove_column(3),
+  file = output_table_file,
+  zoom = 2
+)
+```
