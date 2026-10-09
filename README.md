@@ -14,7 +14,7 @@ Other figures may be reproduced with the circos_plot_generation.Rmd, heatmap_sta
 
 ## Questions
 
-Please reach out with any questions to `connorflynn.chaminade.edu`
+Please reach out with any questions to `connor.flynn@chaminade.edu`
 
 
 
